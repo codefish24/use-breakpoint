@@ -1,0 +1,43 @@
+{
+  "name": "@codefish24/use-breakpoint",
+  "version": "0.1.0",
+  "description": "🐟 Smart breakpoint detection for React - Auto-adapts to Tailwind, Bootstrap, and any CSS framework",
+  "type": "module",
+  "sideEffects": false,
+  "main": "src/lib/useBreakpoint.jsx",
+  "module": "src/lib/useBreakpoint.jsx",
+  "exports": {
+    ".": {
+      "import": "./src/lib/useBreakpoint.jsx",
+      "require": "./src/lib/useBreakpoint.jsx",
+      "default": "./src/lib/useBreakpoint.jsx"
+    }
+  },
+  "files": [
+    "src/lib",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "peerDependencies": {
+    "react": ">=19.2.5",
+    "react-dom": ">=19.2.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.1",
+    "vite": "^8.0.10"
+  },
+  "keywords": [
+    "react",
+    "resize",
+    "responsive",
+    "tailwind",
+    "bootstrap"
+  ],
+  "author": "codefish24",
+  "license": "MIT"
+}
