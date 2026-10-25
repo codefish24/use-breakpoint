@@ -39,5 +39,16 @@
     "bootstrap"
   ],
   "author": "codefish24",
-  "license": "MIT"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/codefish24/use-breakpoint.git"
+  },
+  "homepage": "https://github.com/codefish24/use-breakpoint#readme",
+  "bugs": {
+    "url": "https://github.com/codefish24/use-breakpoint/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }
