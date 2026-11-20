@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import { useBreakpoint, Responsive, RESPONSIVE_PRESETS, AUTO_PRESET_DEFAULTS } from '../src/lib/useBreakpoint.jsx'
+import { useBreakpoint, Responsive, RESPONSIVE_PRESETS } from '../src/lib/useBreakpoint.jsx'
 
 // ─── Copy button ──────────────────────────────────────────────────────────────
 function CopyButton({ text }) {
@@ -488,6 +488,128 @@ RESPONSIVE_PRESETS['cols5']  = { xs: 'grid-cols-1', sm: 'grid-cols-2', lg: 'grid
   )
 }
 
+// ─── 9. Tables ────────────────────────────────────────────────────────────────
+const ORDER_COLS = ['name', 'qty', 'price', 'total', 'status'] // module scope — stable refs
+const ORDER_LABELS = { name: 'Item', qty: 'Qty', price: 'Price', total: 'Total', status: 'Status' }
+const STATUS_COLORS = {
+  Delivered:  'bg-green-100 text-green-700',
+  Shipped:    'bg-indigo-100 text-indigo-700',
+  Processing: 'bg-orange-100 text-orange-700',
+  Cancelled:  'bg-red-100 text-red-700',
+}
+const ORDERS = [
+  { id: 1, name: 'Mechanical Keyboard', qty: 1, price: 129, total: 129, status: 'Delivered' },
+  { id: 2, name: 'USB-C Hub',           qty: 2, price: 39,  total: 78,  status: 'Shipped' },
+  { id: 3, name: 'Monitor Arm',         qty: 1, price: 89,  total: 89,  status: 'Processing' },
+  { id: 4, name: 'XL Desk Mat',         qty: 3, price: 19,  total: 57,  status: 'Shipped' },
+  { id: 5, name: '4K Webcam',           qty: 1, price: 59,  total: 59,  status: 'Cancelled' },
+]
+
+function StatusPill({ status }) {
+  return (
+    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap ${STATUS_COLORS[status] ?? 'bg-gray-100 text-gray-600'}`}>
+      {status}
+    </span>
+  )
+}
+
+// Narrow container — same data, card presentation instead of a table
+function OrderCards({ rows }) {
+  return (
+    <div className="grid gap-2">
+      {rows.map(r => (
+        <div key={r.id} className="border border-gray-200 bg-white rounded-xl p-3">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-semibold text-gray-800 text-sm">{r.name}</span>
+            <StatusPill status={r.status} />
+          </div>
+          <div className="text-xs text-gray-400 mt-1">
+            {r.qty} × ${r.price} · <span className="font-semibold text-gray-600">total ${r.total}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Wider container — render only the columns that survive the width cut
+function OrderTable({ rows, visibleCols }) {
+  return (
+    <table className="w-full text-sm">
+      <thead>
+        <tr className="border-b border-gray-200">
+          {visibleCols.map(c => (
+            <th key={c} className="text-left px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-400 whitespace-nowrap">
+              {ORDER_LABELS[c]}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(r => (
+          <tr key={r.id} className="border-b border-gray-100 last:border-0">
+            {visibleCols.map(c => (
+              <td key={c} className="px-3 py-2 whitespace-nowrap text-gray-600">
+                {c === 'status' ? <StatusPill status={r.status} />
+                  : c === 'name' ? <span className="font-medium text-gray-800">{r[c]}</span>
+                  : r[c]}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+function TablesDemo() {
+  // autoAdapt: false — the hook must never rewrite layout classes on a table wrapper
+  const { ref, breakpoint, width, responsive, isBelow } = useBreakpoint({ autoAdapt: false })
+
+  // Column priority: fewer columns as the container narrows. The map + arrays
+  // live at module scope so third-party column APIs get stable references.
+  const visibleCols = responsive({ xs: ['name', 'total'], sm: ['name', 'qty', 'total'], md: ORDER_COLS })
+  const cardMode = isBelow('sm')
+
+  return (
+    <Section title="📊 Responsive Tables" badge="mobile / tablet" badgeColor="indigo"
+      desc={`Tables break when columns × min-width exceed the container. Narrow the box: cards → 3 columns → all 5. Current: ${breakpoint} (${Math.round(width)}px)`}>
+
+      {/* overflow-x-auto = always-on safety net; ref measures the wrapper's real width */}
+      <div className="rounded-2xl border-2 border-dashed border-indigo-300 bg-gray-50 overflow-x-auto"
+        style={{ resize: 'horizontal', minWidth: 220, maxWidth: '100%' }}>
+        <div ref={ref} className="p-4">
+          {cardMode
+            ? <OrderCards rows={ORDERS} />
+            : <OrderTable rows={ORDERS} visibleCols={visibleCols} />}
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-400 mt-2 text-center">
+        ← drag right edge → · {cardMode ? 'card mode — isBelow(\'sm\')' : `${visibleCols.length} columns visible`}
+      </p>
+
+      <Code>{`const ALL_COLS = ['name', 'qty', 'price', 'total', 'status']  // module scope — stable refs
+
+const { ref, responsive, isBelow } = useBreakpoint({ autoAdapt: false })
+const cols = responsive({ xs: ['name', 'total'], sm: ['name', 'qty', 'total'], md: ALL_COLS })
+
+// ⚠️ ref goes on the WRAPPER, never on <table> (content-driven width = feedback loop)
+<div ref={ref} className="overflow-x-auto">
+  {isBelow('sm')
+    ? <OrderCards rows={rows} />               // cards on narrow containers
+    : <OrderTable rows={rows} cols={cols} />}  // column priority on wider ones
+</div>
+
+// Feed your table library's column API — don't cut the DOM:
+//   TanStack   state.columnVisibility
+//   AG Grid    columnDefs.filter(c => cols.includes(c.field))
+//   MUI        <DataGrid columns={allCols.filter(...)} />
+//   AntD       <Table columns={...} />`}</Code>
+    </Section>
+  )
+}
+
 // ─── App shell ────────────────────────────────────────────────────────────────
 const TABS = [
   { id: 'autopreset',  label: 'autoPreset',       icon: '🚀' },
@@ -496,6 +618,7 @@ const TABS = [
   { id: 'responsive',  label: 'responsive()',    icon: '⚡' },
   { id: 'custom',      label: 'Custom Map',      icon: '🗺️' },
   { id: 'bootstrap',   label: 'Bootstrap',       icon: '🅱️' },
+  { id: 'tables',      label: 'Tables',          icon: '📊' },
   { id: 'range',       label: 'Range Helpers',   icon: '📏' },
   { id: 'window',      label: 'watchWindow',     icon: '🖥️' },
   { id: 'component',   label: '<Responsive>',    icon: '🧩' },
@@ -849,6 +972,7 @@ export default function App() {
         {activeTab === 'responsive'  && <ResponsivePresetDemo />}
         {activeTab === 'custom'      && <CustomMapDemo />}
         {activeTab === 'bootstrap'   && <BootstrapDemo />}
+        {activeTab === 'tables'      && <TablesDemo />}
         {activeTab === 'range'       && <RangeHelpers />}
         {activeTab === 'window'      && <WindowWatchDemo />}
         {activeTab === 'component'   && <ResponsiveComponentDemo />}

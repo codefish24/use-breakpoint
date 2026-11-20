@@ -77,7 +77,8 @@ const BOOTSTRAP_PATTERNS = {
 // ---------------------------------------------------------------------------
 // Framework auto-detection
 // ---------------------------------------------------------------------------
-function detectFramework(element) {
+/** Sniffs 'tailwind' | 'bootstrap' | null from an element's className. Exported for reuse/testing. */
+export function detectFramework(element) {
   if (!element) return null;
   const cls = typeof element.className === 'string' ? element.className : '';
   if (/\b(sm:|md:|lg:|xl:|flex|grid-cols|mx-auto|px-\d|py-\d|text-\w|bg-\w|rounded|shadow)\b/.test(cls)) return 'tailwind';
@@ -88,13 +89,15 @@ function detectFramework(element) {
 // ---------------------------------------------------------------------------
 // Breakpoint utilities
 // ---------------------------------------------------------------------------
-function resolveBreakpoints(bp) {
+/** Normalizes 'tailwind' / 'bootstrap' / custom map / undefined to a breakpoint map. Exported for reuse/testing. */
+export function resolveBreakpoints(bp) {
   if (bp === 'tailwind') return BREAKPOINTS_TAILWIND;
   if (bp === 'bootstrap') return BREAKPOINTS_BOOTSTRAP;
   return bp && typeof bp === 'object' ? bp : BREAKPOINTS_DEFAULT;
 }
 
-function getBreakpointName(width, breakpoints) {
+/** Active breakpoint name for a width (largest min ≤ width, else the smallest). Exported for reuse/testing. */
+export function getBreakpointName(width, breakpoints) {
   const sorted = Object.entries(breakpoints).sort((a, b) => b[1] - a[1]);
   for (const [name, min] of sorted) {
     if (width >= min) return name;
@@ -103,7 +106,8 @@ function getBreakpointName(width, breakpoints) {
 }
 
 // Generates { isXs, isSm, isMd, isLg, isXl, is2xl, ... } for any breakpoint map
-function buildBreakpointFlags(width, breakpoints) {
+/** Generates { isXs, isSm, isMd, isLg, isXl, is2xl, ... } for any breakpoint map. Exported for reuse/testing. */
+export function buildBreakpointFlags(width, breakpoints) {
   const entries = Object.entries(breakpoints).sort((a, b) => a[1] - b[1]);
   const flags = {};
   for (let i = 0; i < entries.length; i++) {
@@ -121,7 +125,8 @@ function buildBreakpointFlags(width, breakpoints) {
 // Pick the value for `width` from a { bp: value } map, walking breakpoints
 // from the largest down. Falls back to the smallest breakpoint present in
 // the map when width is below every entry.
-function resolveResponsiveValue(map, width, breakpoints) {
+/** Core responsive() resolution — picks the value for `width`, walking breakpoints largest down. Exported for reuse/testing. */
+export function resolveResponsiveValue(map, width, breakpoints) {
   const sorted = Object.entries(breakpoints)
     .filter(([name]) => name in map)
     .sort((a, b) => b[1] - a[1]);
@@ -271,7 +276,10 @@ export function useBreakpoint(options = {}) {
     // top of our manual mount measurement, and re-fires when our own class
     // writes shift layout. Nothing new to compute if element + inputs match
     // the last processed run.
-    const sig = `${width}|${height}|${presetKeys.join(',')}|${framework}|${autoAdapt}|${logChanges}`;
+    // Serialize breakpoints into the signature too — switching breakpoint maps
+    // (e.g. 'tailwind' ↔ 'bootstrap') at an unchanged width must still re-resolve.
+    const bpSig = Object.entries(breakpoints).map(([name, min]) => `${name}${min}`).join(',');
+    const sig = `${width}|${height}|${bpSig}|${presetKeys.join(',')}|${framework}|${autoAdapt}|${logChanges}`;
     if (element === lastElementRef.current && sig === lastSigRef.current) return;
     lastElementRef.current = element;
     lastSigRef.current = sig;

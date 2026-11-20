@@ -83,7 +83,7 @@ pnpm add @codefish24/use-breakpoint
 yarn add @codefish24/use-breakpoint
 ```
 
-**Peer dependency:** React ≥ 19
+**Peer dependency:** React ≥ 19 · **TypeScript types included** (no `@types` package needed)
 
 ---
 
@@ -204,6 +204,38 @@ function Sidebar({ children }) {
 }
 ```
 
+### Responsive tables (mobile / tablet)
+
+Tables break when `columns × min-width > available width`. Measure the **wrapper** — never attach `ref` to `<table>` itself (its width follows its content, creating a measurement feedback loop). Pass `autoAdapt: false` so the hook never rewrites layout classes on the wrapper.
+
+```jsx
+const ALL_COLS = ['name', 'qty', 'price', 'total', 'status']  // module scope — stable refs
+
+function Orders({ rows }) {
+  const { ref, responsive, isBelow } = useBreakpoint({ autoAdapt: false })
+
+  // Column priority: fewer columns as the container narrows
+  const cols = responsive({ xs: ['name', 'total'], sm: ['name', 'qty', 'total'], md: ALL_COLS })
+
+  return (
+    <div ref={ref} className="overflow-x-auto">
+      {isBelow('sm') ? <OrderCards rows={rows} /> : <OrderTable rows={rows} cols={cols} />}
+    </div>
+  )
+}
+```
+
+Feed your table library's column API instead of cutting the DOM:
+
+| Library | Where to apply `cols` |
+|---|---|
+| TanStack Table | `state.columnVisibility` |
+| AG Grid | `columnDefs.filter(c => cols.includes(c.field))` |
+| MUI DataGrid | `columns={allCols.filter(...)}` |
+| Ant Design | `<Table columns={...} />` |
+
+Also worth doing on narrow containers: denser pagination (`pageSize={responsive({ xs: 5, md: 10 })}`) and an `overflow-x-auto` wrapper as the always-on safety net. Keep column maps at module scope (or `useMemo`) — new array identities every render make some libraries (AG Grid `columnDefs`) refresh and lose internal state.
+
 ### Watch window size (no ref needed)
 
 ```jsx
@@ -316,6 +348,20 @@ function Page() {
 | `isLandscape` | `boolean` | `width > height` |
 | `isPortrait` | `boolean` | `height >= width` |
 | `suggestions` | `array` | Framework layout hints for the current width |
+
+---
+
+### Exported utilities
+
+Pure helpers, exported for advanced use (and covered by the test suite):
+
+| Function | Description |
+|---|---|
+| `resolveBreakpoints(bp)` | Normalizes `'tailwind'` / `'bootstrap'` / a map / `undefined` into a breakpoint map |
+| `getBreakpointName(width, breakpoints)` | Active breakpoint name for a width |
+| `buildBreakpointFlags(width, breakpoints)` | `{ isXs, isSm, … }` exact-match flags for a width |
+| `resolveResponsiveValue(map, width, breakpoints)` | Core `responsive()` resolution logic |
+| `detectFramework(element)` | Sniffs `'tailwind'` / `'bootstrap'` / `null` from a className |
 
 ---
 
